@@ -1,0 +1,21 @@
+{
+  "name": "whats-openclaw-glue",
+  "version": "0.1.0",
+  "description": "Glue server: Evolution API webhooks <-> OpenClaw, plus QR pairing UI",
+  "private": true,
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "pino": "^9.5.0",
+    "pino-http": "^10.4.0",
+    "undici": "^6.21.0"
+  }
+}

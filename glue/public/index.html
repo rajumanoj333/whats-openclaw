@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Connect WhatsApp to OpenClaw</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <main class="card">
+      <h1>Connect WhatsApp</h1>
+      <p class="sub">Pair the bot with your WhatsApp number. Open WhatsApp on your phone →
+        <strong>Settings → Linked devices → Link a device</strong> → scan the QR below.</p>
+
+      <section id="state" class="state state--idle" aria-live="polite">
+        <div class="state__dot" aria-hidden="true"></div>
+        <div class="state__label">Ready</div>
+      </section>
+
+      <section id="qr-box" class="qr">
+        <div id="qr-placeholder" class="qr__placeholder">
+          <button id="connect-btn" class="btn btn--primary">Generate QR</button>
+        </div>
+        <img id="qr-image" alt="WhatsApp pairing QR" hidden />
+        <p id="pairing-code" class="pairing-code" hidden></p>
+      </section>
+
+      <section class="actions" hidden id="actions">
+        <button id="restart-btn" class="btn">New QR</button>
+      </section>
+
+      <p id="instance-label" class="muted"></p>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
