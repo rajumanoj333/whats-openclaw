@@ -174,21 +174,40 @@ app.post("/webhook", async (req, res) => {
 
   const event = req.body?.event;
   const data = req.body?.data;
-  if (event !== "messages.upsert" || !data) return;
+  log.info({
+    event,
+    messageType: data?.messageType,
+    fromMe: data?.key?.fromMe,
+    remoteJid: data?.key?.remoteJid,
+    hasMessage: !!data?.message,
+    msgKeys: data?.message ? Object.keys(data.message) : null,
+  }, "webhook event");
+
+  if (!event || !data) { log.debug("drop: no event or data"); return; }
+  // Evolution sends event names like "messages.upsert" or "MESSAGES_UPSERT"
+  const ev = String(event).toLowerCase().replace(/_/g, ".");
+  if (ev !== "messages.upsert") { log.debug({ event }, "drop: not messages.upsert"); return; }
 
   const remoteJid = data?.key?.remoteJid || "";
   const fromMe = !!data?.key?.fromMe;
-  if (cfg.skipSelf && fromMe) return;
-  if (cfg.skipGroups && isGroup(remoteJid)) return;
+  if (cfg.skipSelf && fromMe) { log.info({ remoteJid }, "drop: fromMe"); return; }
+  if (cfg.skipGroups && isGroup(remoteJid)) { log.info({ remoteJid }, "drop: group"); return; }
 
   const text = extractText(data);
-  if (!text.trim()) return;
+  if (!text.trim()) {
+    log.info({
+      remoteJid,
+      messageType: data?.messageType,
+      msgKeys: data?.message ? Object.keys(data.message) : null,
+    }, "drop: no text content");
+    return;
+  }
 
   const e164 = jidToE164(remoteJid);
-  if (!e164) return;
+  if (!e164) { log.warn({ remoteJid }, "drop: cannot derive E.164"); return; }
 
   if (!isAllowed(e164)) {
-    log.info({ e164 }, "sender not in allowlist; ignoring");
+    log.info({ e164, allowlist: cfg.allowlist }, "drop: not in allowlist");
     return;
   }
 
