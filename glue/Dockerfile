@@ -5,7 +5,7 @@ ENV NODE_ENV=production \
     OPENCLAW_DISABLE_UPDATE_CHECK=1
 
 RUN apt-get update \
- && apt-get install -y --no-install-recommends curl ca-certificates \
+ && apt-get install -y --no-install-recommends curl ca-certificates socat \
  && rm -rf /var/lib/apt/lists/*
 
 # Install OpenClaw CLI globally so this container can call `openclaw agent ...`

@@ -81,25 +81,17 @@ curl -X POST https://<your-domain>/webhook \
 
 `entrypoint.sh` writes a minimal `~/.openclaw/openclaw.json` at container start using the env vars, then runs `openclaw config validate` before launching the server. If validation fails the container exits.
 
-Shape written:
+### Loopback proxy
 
-```json
-{
-  "gateway": {
-    "mode": "remote",
-    "remote": { "url": "ws://host.docker.internal:18789/ws" },
-    "auth":   { "mode": "token", "token": "***" }
-  }
-}
-```
+The OpenClaw CLI refuses `ws://` to any address that is not the literal 127.0.0.1 — token-over-plaintext to a routable address is rejected as a credential-leak risk. When the gateway runs on the Docker host, the container reaches it via `host.docker.internal`, which the CLI flags as non-loopback. To satisfy the check without disabling it, the entrypoint starts a `socat` listener on the container's own `127.0.0.1:18789` and forwards to the upstream gateway. The CLI then connects to real loopback.
 
-If `openclaw config validate` rejects this shape on your OpenClaw version, run on the host:
+Knobs:
 
-```bash
-openclaw config schema | jq '.properties.gateway' | head -80
-```
+- `GATEWAY_PROXY_HOST` — upstream host (default `host.docker.internal`).
+- `GATEWAY_PROXY_PORT` — upstream port (default `18789`).
+- `GATEWAY_PROXY_DISABLED=1` — skip the proxy entirely (use when `OPENCLAW_GATEWAY_URL` is already a loopback or `wss://` URL).
 
-and patch `entrypoint.sh` accordingly.
+Token traffic between the container and the host still flows over the Docker bridge unencrypted. On a single-tenant host (only your services), the practical exposure is limited. On a shared Docker host, switch the gateway to `wss://` and set `GATEWAY_PROXY_DISABLED=1` instead.
 
 ## OpenClaw reply parsing
 
