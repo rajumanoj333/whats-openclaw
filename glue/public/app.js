@@ -22,6 +22,8 @@ const instanceEl  = $("#instance-label");
 let pollTimer = null;
 let polling   = false;
 let connectedShown = false;
+let qrRefreshTimer = null;
+const QR_REFRESH_MS = 20_000;
 
 function log(...args) { console.log("[whats-bot-ui]", ...args); }
 
@@ -86,6 +88,7 @@ async function startPair() {
     if (data.qrBase64) {
       showQr(data.qrBase64, data.pairingCode);
       setState("qr");
+      beginQrRefresh();
     } else {
       setState("connecting");
     }
@@ -94,6 +97,29 @@ async function startPair() {
   } catch (e) {
     console.error(e);
     setState("error", `Error: ${e.message}`);
+  }
+}
+
+function beginQrRefresh() {
+  if (qrRefreshTimer) return;
+  qrRefreshTimer = setInterval(refreshQr, QR_REFRESH_MS);
+}
+
+function stopQrRefresh() {
+  if (qrRefreshTimer) clearInterval(qrRefreshTimer);
+  qrRefreshTimer = null;
+}
+
+async function refreshQr() {
+  if (connectedShown) { stopQrRefresh(); return; }
+  try {
+    const data = await callPairStart();
+    if (data.qrBase64) {
+      showQr(data.qrBase64, data.pairingCode);
+      log("QR refreshed");
+    }
+  } catch (e) {
+    log("QR refresh failed", e.message);
   }
 }
 
@@ -120,6 +146,7 @@ async function pollStatus() {
       setState("open");
       showConnected();
       stopPolling();
+      stopQrRefresh();
     } else if (state === "connecting") {
       // Keep QR visible. Only change badge if no QR has been rendered yet.
       if (qrImg.hidden) setState("connecting");
