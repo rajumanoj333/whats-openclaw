@@ -89,7 +89,17 @@ export class OpenClawClient {
 
     try {
       const obj = JSON.parse(trimmed);
+      // First check payloads array (OpenClaw 2026.5.x agent --json shape).
+      const payloads = obj?.result?.payloads;
+      if (Array.isArray(payloads)) {
+        const textPayloads = payloads
+          .map((p) => (typeof p?.text === "string" ? p.text : ""))
+          .filter((t) => t.trim().length > 0);
+        if (textPayloads.length) return textPayloads.join("\n\n").trim();
+      }
       const candidates = [
+        obj.result?.meta?.finalAssistantVisibleText,
+        obj.result?.meta?.finalAssistantRawText,
         obj.reply,
         obj.text,
         obj.message,
@@ -104,11 +114,9 @@ export class OpenClawClient {
       ];
       const first = candidates.find((v) => typeof v === "string" && v.trim().length > 0);
       if (first) return first.trim();
-      // Last resort: stringify the JSON so we deliver _something_ rather than dropping the turn
       this.log?.warn({ keys: Object.keys(obj) }, "could not find reply text in openclaw JSON; returning stringified");
       return JSON.stringify(obj);
     } catch {
-      // stdout was not JSON — assume it is the reply text directly
       return trimmed;
     }
   }
