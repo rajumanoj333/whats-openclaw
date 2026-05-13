@@ -94,6 +94,21 @@ function verifyWebhookSignature(req) {
 
 // Per-sender sliding window rate limiter (in-memory; fine for single-replica MVP)
 const rateBuckets = new Map();
+
+// Dedupe webhook events by message ID. Evolution v2 fires each event twice
+// (global webhook + per-instance webhook, or duplicate emit on its side).
+const seenMessageIds = new Map();
+const SEEN_TTL_MS = 5 * 60_000;
+function alreadyHandled(id) {
+  if (!id) return false;
+  const now = Date.now();
+  for (const [k, t] of seenMessageIds) {
+    if (now - t > SEEN_TTL_MS) seenMessageIds.delete(k);
+  }
+  if (seenMessageIds.has(id)) return true;
+  seenMessageIds.set(id, now);
+  return false;
+}
 function checkRate(e164) {
   const now = Date.now();
   const windowMs = 60_000;
@@ -187,6 +202,12 @@ app.post("/webhook", async (req, res) => {
   // Evolution sends event names like "messages.upsert" or "MESSAGES_UPSERT"
   const ev = String(event).toLowerCase().replace(/_/g, ".");
   if (ev !== "messages.upsert") { log.debug({ event }, "drop: not messages.upsert"); return; }
+
+  const msgId = data?.key?.id;
+  if (alreadyHandled(msgId)) {
+    log.info({ msgId }, "drop: duplicate webhook");
+    return;
+  }
 
   const remoteJid = data?.key?.remoteJid || "";
   const fromMe = !!data?.key?.fromMe;
